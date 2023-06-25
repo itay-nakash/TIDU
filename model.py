@@ -1,14 +1,17 @@
+# %% 
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from wordcloud import WordCloud
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 from collections import Counter
 
-data_folder= '/home/itay.nakash/hw/roy_corse/data/'
+data_folder= '/home/itay.nakash/hw/roy_corse/TIDU/data/'
 
 class TextClassifier:
 
@@ -50,10 +53,13 @@ def print_report(y_test, y_pred, method):
 
 def plot_confusion_matrix(y_test, y_pred, labels):
     cm = confusion_matrix(y_test, y_pred, labels=labels)
-    plt.figure(figsize=(10, 7))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-    plt.xlabel('Predicted')
-    plt.ylabel('Truth')
+    cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]  # normalize
+
+    fig, ax = plt.subplots(figsize=(10, 7))
+    sns.heatmap(cm_normalized, annot=True, fmt=".2f", cmap='Blues', ax=ax, xticklabels=labels, yticklabels=labels)
+
+    ax.set_xlabel('Predicted')
+    ax.set_ylabel('Truth')
     plt.show()
 
 
@@ -63,6 +69,20 @@ def print_top_features(vectorizer, clf, class_labels, n=10):
         top_features = np.argsort(clf.coef_[i])[-n:]
         print(f"Top features for class {class_label}:")
         print(", ".join(feature_names[j] for j in top_features))
+
+
+def plot_wordclouds(X_train, y_train, vectorizer, class_labels):
+    for class_label in class_labels:
+        class_words = ' '.join(X_train[y_train == class_label])
+        class_word_vector = vectorizer.transform([class_words])
+        words_freq = dict(zip(vectorizer.get_feature_names_out(), np.asarray(class_word_vector.sum(axis=0)).ravel()))
+        wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(words_freq)
+
+        plt.figure(figsize=(10, 5))
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis("off")
+        plt.title(f"Most frequent words in class {class_label}")
+        plt.show()
 
 
 if __name__ == '__main__':
@@ -89,3 +109,10 @@ if __name__ == '__main__':
 
     # Print top features for each class
     print_top_features(classifier.vectorizer, classifier.clf, class_labels=[1, 2, 3, 4])
+
+    # %% 
+    # Plot word clouds for each class
+    plot_wordclouds(classifier.X_train, classifier.y_train, classifier.vectorizer, class_labels=[1, 2, 3, 4])
+
+
+# %%
