@@ -1,4 +1,3 @@
-# %% 
 
 import pandas as pd
 import numpy as np
@@ -10,14 +9,28 @@ from sklearn.svm import LinearSVC
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 from collections import Counter
+from abc import ABC, abstractmethod
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.linear_model import LinearRegression
+
+
+
+
 
 data_folder= '/home/itay.nakash/hw/roy_corse/TIDU/data/'
 
-class TextClassifier:
+
+# adding multi class clasification, and additional analyzing according to this
+
+class TextClassifier(ABC):
 
     def __init__(self):
         self.vectorizer = TfidfVectorizer()
-        self.clf = LinearSVC()
+
+    @abstractmethod
+    def get_classifier(self):
+        pass
 
     def load_data(self):
         train_data = pd.read_csv(data_folder + 'train.csv')
@@ -26,7 +39,7 @@ class TextClassifier:
 
         self.X_train = full_train_data['text']
         self.y_train = full_train_data['label']
-        test_data= pd.read_csv(data_folder+'test.csv')
+        test_data = pd.read_csv(data_folder + 'test.csv')
         self.X_test = test_data['text']
         self.y_test = test_data['label']
 
@@ -35,6 +48,7 @@ class TextClassifier:
         self.X_test_vec = self.vectorizer.transform(self.X_test)
 
     def train(self):
+        self.clf = self.get_classifier()
         self.clf.fit(self.X_train_vec, self.y_train)
 
     def predict(self):
@@ -43,6 +57,30 @@ class TextClassifier:
     def majority_vote_baseline(self):
         most_common_class = Counter(self.y_train).most_common(1)[0][0]
         return [most_common_class] * len(self.y_test)
+
+
+class SVMTextClassifier(TextClassifier):
+
+    def get_classifier(self):
+        return LinearSVC()
+
+
+class RandomForestTextClassifier(TextClassifier):
+
+    def get_classifier(self):
+        return RandomForestClassifier()
+
+
+class NaiveBayesTextClassifier(TextClassifier):
+
+    def get_classifier(self):
+        return MultinomialNB()
+
+
+class LinearRegressionTextClassifier(TextClassifier):
+
+    def get_classifier(self):
+        return LinearRegression()
 
 
 def print_report(y_test, y_pred, method):
@@ -86,33 +124,28 @@ def plot_wordclouds(X_train, y_train, vectorizer, class_labels):
 
 
 if __name__ == '__main__':
-    classifier = TextClassifier()
+    
+    
+    #classifier = LinearRegressionTextClassifier() need to get regression to work
 
-    # Load and transform data
+    classifier = SVMTextClassifier()
+
     classifier.load_data()
     classifier.transform_data()
 
-    # Train classifier and get predictions
     classifier.train()
     y_pred = classifier.predict()
 
-    # Get baseline predictions
     baseline_pred = classifier.majority_vote_baseline()
 
-    # Print reports
     print_report(classifier.y_test, y_pred, 'TF-IDF & LinearSVC')
     print_report(classifier.y_test, baseline_pred, 'Majority Vote Baseline')
 
-    # Plot confusion matrices
     plot_confusion_matrix(classifier.y_test, y_pred, labels=[1, 2, 3, 4])
     plot_confusion_matrix(classifier.y_test, baseline_pred, labels=[1, 2, 3, 4])
 
-    # Print top features for each class
     print_top_features(classifier.vectorizer, classifier.clf, class_labels=[1, 2, 3, 4])
 
-    # %% 
-    # Plot word clouds for each class
     plot_wordclouds(classifier.X_train, classifier.y_train, classifier.vectorizer, class_labels=[1, 2, 3, 4])
 
 
-# %%
