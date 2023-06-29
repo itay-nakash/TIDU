@@ -13,12 +13,13 @@ from abc import ABC, abstractmethod
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LinearRegression
+from statsmodels.miscmodels.ordinal_model import OrderedModel # install with pip install statsmodels
 
 
+MODE = 'ordinal' # 'ordinal' or 'regression' or 'classification'
+assert MODE in ['ordinal', 'regression', 'classification'], "MODE must be one of 'ordinal', 'regression', 'classification'"
 
-
-
-data_folder= '/home/itay.nakash/hw/roy_corse/TIDU/data/'
+data_folder= 'data/'
 
 
 # adding multi class clasification, and additional analyzing according to this
@@ -26,7 +27,8 @@ data_folder= '/home/itay.nakash/hw/roy_corse/TIDU/data/'
 class TextClassifier(ABC):
 
     def __init__(self):
-        self.vectorizer = TfidfVectorizer()
+        self.vectorizer = TfidfVectorizer(min_df=2, max_df=0.8, sublinear_tf=True,
+                                          max_features=40, stop_words='english')
 
     @abstractmethod
     def get_classifier(self):
@@ -123,19 +125,41 @@ def plot_wordclouds(X_train, y_train, vectorizer, class_labels):
         plt.show()
 
 
+def ordinal_regression(X_train, y_train, X_test):
+    # count number of constant columns  
+    assert np.sum(np.all(X_train == X_train[0,:], axis = 0)) == 0, "X has constant columns"
+    # Fit the ordered model
+    model = OrderedModel(exog=X_train, endog=y_train,distr='logit', hasconst=False)
+    result = model.fit()
+
+    y_pred = result.predict(exog=X_test)
+    # get argmax per row
+    y_pred = np.argmax(y_pred, axis=1) + 1
+    return y_pred
+
 if __name__ == '__main__':
     
-    
-    #classifier = LinearRegressionTextClassifier() need to get regression to work
+    if MODE == 'regression':
+        classifier = LinearRegressionTextClassifier()
 
-    classifier = SVMTextClassifier()
+    if MODE == 'classification':
+        classifier = SVMTextClassifier()
 
+    if MODE == 'ordinal':
+        classifier = SVMTextClassifier() # JUST FOR THE DATA PREPROCESSING
+        
     classifier.load_data()
     classifier.transform_data()
-
+  
+    if MODE == 'ordinal':
+        y_pred = ordinal_regression(X_train = classifier.X_train_vec.toarray(),
+                                    y_train=classifier.y_train, 
+                                    X_test = classifier.X_test_vec.toarray())
+    
+    
+    
     classifier.train()
-    y_pred = classifier.predict()
-
+    y_pred = classifier.predict().round()
     baseline_pred = classifier.majority_vote_baseline()
 
     print_report(classifier.y_test, y_pred, 'TF-IDF & LinearSVC')
