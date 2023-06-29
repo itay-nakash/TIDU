@@ -126,7 +126,7 @@ def plot_wordclouds(X_train, y_train, vectorizer, class_labels):
 if __name__ == '__main__':
     
     
-    #classifier = LinearRegressionTextClassifier() need to get regression to work
+    #classifier = LinearRegressionTextClassifier()
 
     classifier = SVMTextClassifier()
 
@@ -134,7 +134,7 @@ if __name__ == '__main__':
     classifier.transform_data()
 
     classifier.train()
-    y_pred = classifier.predict()
+    y_pred = classifier.predict().round()
 
     baseline_pred = classifier.majority_vote_baseline()
 
